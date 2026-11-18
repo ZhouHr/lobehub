@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "custom_emojis" (
 	"id" text PRIMARY KEY NOT NULL,
 	"pack_id" text NOT NULL,
 	"user_id" text,
-	"file_id" text NOT NULL,
+	"file_hash" varchar(64) NOT NULL,
 	"name" text NOT NULL,
 	"keywords" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"bound_emojis" jsonb DEFAULT '[]'::jsonb NOT NULL,
@@ -60,8 +60,8 @@ ALTER TABLE "custom_emojis" DROP CONSTRAINT IF EXISTS "custom_emojis_pack_id_emo
 ALTER TABLE "custom_emojis" ADD CONSTRAINT "custom_emojis_pack_id_emoji_packs_id_fk" FOREIGN KEY ("pack_id") REFERENCES "public"."emoji_packs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "custom_emojis" DROP CONSTRAINT IF EXISTS "custom_emojis_user_id_users_id_fk";--> statement-breakpoint
 ALTER TABLE "custom_emojis" ADD CONSTRAINT "custom_emojis_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "custom_emojis" DROP CONSTRAINT IF EXISTS "custom_emojis_file_id_files_id_fk";--> statement-breakpoint
-ALTER TABLE "custom_emojis" ADD CONSTRAINT "custom_emojis_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "custom_emojis" DROP CONSTRAINT IF EXISTS "custom_emojis_file_hash_global_files_hash_id_fk";--> statement-breakpoint
+ALTER TABLE "custom_emojis" ADD CONSTRAINT "custom_emojis_file_hash_global_files_hash_id_fk" FOREIGN KEY ("file_hash") REFERENCES "public"."global_files"("hash_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "emoji_packs" DROP CONSTRAINT IF EXISTS "emoji_packs_user_id_users_id_fk";--> statement-breakpoint
 ALTER TABLE "emoji_packs" ADD CONSTRAINT "emoji_packs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "emoji_packs" DROP CONSTRAINT IF EXISTS "emoji_packs_workspace_id_workspaces_id_fk";--> statement-breakpoint
@@ -73,7 +73,7 @@ ALTER TABLE "user_emoji_packs" ADD CONSTRAINT "user_emoji_packs_pack_id_emoji_pa
 CREATE UNIQUE INDEX IF NOT EXISTS "channel_message_reactions_message_member_emoji_unique" ON "channel_message_reactions" USING btree ("message_id","member_id","emoji");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "channel_message_reactions_channel_member_idx" ON "channel_message_reactions" USING btree ("channel_id","member_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "custom_emojis_pack_id_sort_order_idx" ON "custom_emojis" USING btree ("pack_id","sort_order");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "custom_emojis_file_id_idx" ON "custom_emojis" USING btree ("file_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "custom_emojis_file_hash_idx" ON "custom_emojis" USING btree ("file_hash");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "custom_emojis_pack_id_name_unique" ON "custom_emojis" USING btree ("pack_id","name") WHERE "custom_emojis"."removed_at" IS NULL;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "emoji_packs_user_id_idx" ON "emoji_packs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "emoji_packs_workspace_id_idx" ON "emoji_packs" USING btree ("workspace_id");--> statement-breakpoint

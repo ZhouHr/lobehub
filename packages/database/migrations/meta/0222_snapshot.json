@@ -6,7 +6,7 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "b2b261f7-9911-40fb-a1f3-9a6ad9abd09f",
+  "id": "81623e0a-c9db-456e-b12a-79720ff0ac3d",
   "policies": {},
   "prevId": "4caccfb8-4b95-4149-b512-2d72e1ba77de",
   "roles": {},
@@ -18947,9 +18947,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "file_id": {
-          "name": "file_id",
-          "type": "text",
+        "file_hash": {
+          "name": "file_hash",
+          "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true
         },
@@ -19049,11 +19049,11 @@
           "method": "btree",
           "with": {}
         },
-        "custom_emojis_file_id_idx": {
-          "name": "custom_emojis_file_id_idx",
+        "custom_emojis_file_hash_idx": {
+          "name": "custom_emojis_file_hash_idx",
           "columns": [
             {
-              "expression": "file_id",
+              "expression": "file_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -19106,13 +19106,13 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "custom_emojis_file_id_files_id_fk": {
-          "name": "custom_emojis_file_id_files_id_fk",
+        "custom_emojis_file_hash_global_files_hash_id_fk": {
+          "name": "custom_emojis_file_hash_global_files_hash_id_fk",
           "tableFrom": "custom_emojis",
-          "tableTo": "files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
+          "tableTo": "global_files",
+          "columnsFrom": ["file_hash"],
+          "columnsTo": ["hash_id"],
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
