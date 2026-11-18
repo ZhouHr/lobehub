@@ -5,6 +5,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { channelMessages, channelThreads } from '../../schemas';
 import type { LobeChatDatabase } from '../../type';
 import { notTrashed } from '../../utils/softDelete';
+import { OPENING_REQUEST_KEY_PREFIX } from './opening';
 import { messageStands } from './tombstone';
 
 /** Characters of the latest message a Channel list item carries as its preview. */
@@ -17,6 +18,7 @@ const THREAD_TITLE_LENGTH = 60;
  * they do for the unread count: a reply in a Thread is the conversation's latest activity, and a
  * preview stopped at the main conversation reads as nothing new. Trashed Threads are skipped.
  * A Thread is named by its title, else the first line of the message it branched from.
+ * `opening` marks an Agent's acknowledgement posted before its run, which announces nothing.
  */
 export const channelLastMessages = async (
   db: LobeChatDatabase,
@@ -30,6 +32,7 @@ export const channelLastMessages = async (
       channelId: channelMessages.channelId,
       content: sql<string>`left(${channelMessages.content}, ${LIST_PREVIEW_LENGTH})`,
       createdAt: channelMessages.createdAt,
+      opening: sql<boolean>`coalesce(${channelMessages.requestKey} like ${`${OPENING_REQUEST_KEY_PREFIX}%`}, false)`,
       threadId: channelMessages.threadId,
       threadTitle: sql<string | null>`coalesce(
         nullif(${channelThreads.metadata} ->> 'title', ''),
@@ -58,11 +61,12 @@ export const channelLastMessages = async (
     .orderBy(channelMessages.channelId, desc(channelMessages.sequence));
 
   return new Map(
-    latest.map(({ channelId, content, createdAt, threadId, threadTitle }) => [
+    latest.map(({ channelId, content, createdAt, opening, threadId, threadTitle }) => [
       channelId,
       {
         content,
         createdAt,
+        opening,
         thread: threadId ? { id: threadId, title: threadTitle } : null,
       },
     ]),
