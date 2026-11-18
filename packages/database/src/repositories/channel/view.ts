@@ -15,6 +15,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  notLike,
   or,
   type SQL,
   sql,
@@ -39,6 +40,7 @@ import { fileIdsByMessage } from './attachments';
 import { isAgentAuthored } from './author';
 import { activeMembers } from './delivery';
 import { ChannelError } from './error';
+import { OPENING_REQUEST_KEY_PREFIX } from './openingKey';
 import { externalWorksByMessage } from './works';
 
 export const publicMessageColumns = {
@@ -201,7 +203,16 @@ const threadSummaries = async (tx: Transaction, channelId: string, threadIds: st
       .from(channelMessages)
       .leftJoin(users, eq(users.id, channelMessages.userId))
       .leftJoin(agents, eq(agents.id, channelMessages.agentId))
-      .where(scope)
+      // An Agent's acknowledgement is not the thread's news: it neither previews nor marks unread.
+      .where(
+        and(
+          scope,
+          or(
+            isNull(channelMessages.requestKey),
+            notLike(channelMessages.requestKey, `${OPENING_REQUEST_KEY_PREFIX}%`),
+          ),
+        ),
+      )
       .orderBy(asc(channelMessages.threadId), desc(channelMessages.sequence)),
   ]);
   const replyCounts = new Map(counts.map((row) => [row.threadId, row.replyCount]));

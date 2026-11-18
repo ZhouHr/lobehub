@@ -15,6 +15,7 @@ import type { LobeChatDatabase, Transaction } from '../../type';
 import { notTrashed } from '../../utils/softDelete';
 import { appendMessage } from './delivery';
 import { readManifestMessages } from './manifest';
+import { openingRequestKey } from './openingKey';
 import type { OpeningFacts, OpeningLayout } from './openingLayout';
 import { chooseOpeningLayout } from './openingLayout';
 import { audit, withChannelLock } from './transaction';
@@ -28,10 +29,6 @@ const THREAD_TITLE_LENGTH = 60;
 
 /** Messages before the request the opener sees, oldest first. */
 const OPENING_CONTEXT_LIMIT = 6;
-
-/** Request key of the acknowledgement a job posted before its run. */
-export const OPENING_REQUEST_KEY_PREFIX = 'opening:';
-export const openingRequestKey = (jobId: string) => `${OPENING_REQUEST_KEY_PREFIX}${jobId}`;
 
 /** Another Agent the same request asked to answer, in parallel with this one. */
 export interface ChannelCoAddressedAgent {

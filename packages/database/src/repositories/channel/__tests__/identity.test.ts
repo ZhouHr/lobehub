@@ -117,9 +117,33 @@ describe('direct Channel identity', () => {
       content: 'On it, checking the logs first.',
       opening: true,
     });
+    // Nor is it unread: the badge waits for the answer.
+    const unread = async () =>
+      (await repository.list()).find((item) => item.id === channel.id)?.unreadCount;
+    expect(await unread()).toBe(0);
 
     await publish(channel.id, message.id);
     expect(await listed()).toMatchObject({ content: 'Answer', opening: false });
+    expect(await unread()).toBe(1);
+  });
+
+  it('leaves an Agent’s acknowledgement out of its Thread’s newest reply', async () => {
+    const agent = await createAgent();
+    const repository = new ChannelRepository(db, fixture.ownerId, fixture.workspaceId);
+    const { channel } = await repository.create({ agentId: agent.id, title: 'Direct' });
+    const root = await repository.send(channel.id, { ...sendInput, requestKey: 'root' });
+    const reply = await repository.send(channel.id, {
+      ...sendInput,
+      content: 'In the thread',
+      requestKey: 'thread-reply',
+      rootMessageId: root.id,
+    });
+    const [job] = await jobsOf(db, reply.id);
+    await execution.open(channel.id, job.id, { ack: 'On it.' });
+    const lastReply = async () =>
+      (await repository.detail(channel.id)).threads.find(({ id }) => id === reply.threadId)
+        ?.lastReply;
+    expect(await lastReply()).toMatchObject({ content: 'In the thread' });
   });
 
   // A list row only knew a reply was in progress once its conversation was opened.
