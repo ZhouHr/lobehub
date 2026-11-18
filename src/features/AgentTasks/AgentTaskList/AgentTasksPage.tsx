@@ -56,6 +56,7 @@ import {
   normalizeTaskListViewOptions,
   toStoredTaskListViewOptions,
 } from './listViewOptions';
+import { ScheduledDispatchAlert } from './ScheduledDispatchAlert';
 import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
 import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
@@ -656,6 +657,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, headerActions, proj
             paddingInline={16}
             wrapperStyle={{ flex: 1, overflowY: 'auto' }}
           >
+            {isScheduledCollection && <ScheduledDispatchAlert />}
             <TaskList
               data={isCollectionListInit || undefined}
               error={collectionSWR.error ?? projectListError}
