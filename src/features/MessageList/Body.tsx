@@ -66,17 +66,19 @@ const useActiveRouteId = () => {
   return root === 'agent' || root === 'group' ? id : undefined;
 };
 
-const ConversationItem = memo<{ activeRouteId?: string; conversation: Conversation }>(
-  ({ activeRouteId, conversation }) => {
-    const active = conversation.item.id === activeRouteId;
+const ConversationItem = memo<{
+  activeRouteId?: string;
+  conversation: Conversation;
+  variant?: 'row' | 'tile';
+}>(({ activeRouteId, conversation, variant }) => {
+  const active = conversation.item.id === activeRouteId;
 
-    return conversation.item.type === 'group' ? (
-      <GroupConversation active={active} conversation={conversation} />
-    ) : (
-      <AgentConversation active={active} conversation={conversation} />
-    );
-  },
-);
+  return conversation.item.type === 'group' ? (
+    <GroupConversation active={active} conversation={conversation} variant={variant} />
+  ) : (
+    <AgentConversation active={active} conversation={conversation} variant={variant} />
+  );
+});
 
 ConversationItem.displayName = 'ConversationItem';
 
@@ -210,7 +212,18 @@ const Body = memo(() => {
     <Flexbox gap={1} paddingBlock={'0 12px'} paddingInline={6}>
       {pinnedEntries.length > 0 && (
         <div aria-label={t('navPanel.pinned')} role="group" {...stylex.props(styles.pinnedGroup)}>
-          {pinnedEntries.map(renderEntry)}
+          {pinnedEntries.map((entry) =>
+            entry.type === 'item' ? (
+              <ConversationItem
+                activeRouteId={activeRouteId}
+                conversation={entry}
+                key={entry.item.id}
+                variant={'tile'}
+              />
+            ) : (
+              renderEntry(entry)
+            ),
+          )}
         </div>
       )}
       {otherEntries.map(renderEntry)}

@@ -2,6 +2,8 @@ import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
 
 export const AVATAR_SIZE = 28;
+/** Pinned tiles use a card-sized avatar over the compact row one. */
+export const PINNED_AVATAR_SIZE = 56;
 
 export const styles = stylex.create({
   avatar: {
@@ -15,13 +17,12 @@ export const styles = stylex.create({
     fontSize: '12px',
     color: cssVar.colorTextQuaternary,
   },
-  /** Pinned rows share one tinted block, like WeChat's 置顶, instead of a card per row. */
+  /** Pinned conversations read as a card grid, like OpenBot's pinned assistants. */
   pinnedGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1px',
-    borderRadius: cssVar.borderRadiusLG,
-    backgroundColor: cssVar.colorFillQuaternary,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+    columnGap: '4px',
+    rowGap: '2px',
   },
   preview: {
     overflow: 'hidden',
@@ -60,6 +61,46 @@ export const styles = stylex.create({
   },
   running: {
     color: cssVar.colorSuccess,
+  },
+  /** A pinned conversation as a large-avatar tile instead of a row. */
+  tile: {
+    cursor: 'pointer',
+    userSelect: 'none',
+
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    alignItems: 'center',
+
+    paddingBlockStart: '8px',
+    paddingBlockEnd: '6px',
+    paddingInline: '4px',
+    borderRadius: cssVar.borderRadiusLG,
+
+    color: cssVar.colorText,
+    textDecoration: 'none',
+
+    backgroundColor: { default: null, ':hover': cssVar.colorFillTertiary },
+    transition: 'background-color 0.15s',
+  },
+  tileActive: {
+    backgroundColor: { default: cssVar.colorFillSecondary, ':hover': cssVar.colorFillSecondary },
+  },
+  tileTitle: {
+    overflow: 'hidden',
+    width: '100%',
+
+    fontSize: '12px',
+    fontWeight: 500,
+    lineHeight: '16px',
+    color: cssVar.colorTextSecondary,
+    textAlign: 'center',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  tileTitleActive: {
+    color: cssVar.colorText,
+    fontWeight: 600,
   },
   time: {
     flex: 'none',

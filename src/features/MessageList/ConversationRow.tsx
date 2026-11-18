@@ -32,6 +32,8 @@ export interface ConversationRowProps {
   title: string;
   unread?: number;
   url: string;
+  /** `tile` draws the pinned large-avatar card; `row` is the regular conversation list line. */
+  variant?: 'row' | 'tile';
 }
 
 /** A row link that leaves the conversation when it is already open. Modified clicks keep the link. */
@@ -72,26 +74,40 @@ const ConversationRow = memo<ConversationRowProps>(
     title,
     unread,
     url,
+    variant = 'row',
   }) => {
+    const isTile = variant === 'tile';
     const { t } = useTranslation('common');
     const link: WorkspaceLinkProps = {
       'aria-current': active ? 'page' : undefined,
       'aria-label': title,
       ref,
-      ...stylex.props(styles.row, active && styles.rowActive),
+      ...stylex.props(
+        isTile ? styles.tile : styles.row,
+        active && (isTile ? styles.tileActive : styles.rowActive),
+      ),
       'to': url,
       onClick,
       onMouseEnter,
     };
 
-    const content = (
+    const avatarNode = (
+      <span {...stylex.props(styles.avatar)}>
+        {avatar}
+        {!!unread && unread > 0 && (
+          <span {...stylex.props(styles.unread)}>{unread > 99 ? '99+' : unread}</span>
+        )}
+      </span>
+    );
+
+    const content = isTile ? (
       <>
-        <span {...stylex.props(styles.avatar)}>
-          {avatar}
-          {!!unread && unread > 0 && (
-            <span {...stylex.props(styles.unread)}>{unread > 99 ? '99+' : unread}</span>
-          )}
-        </span>
+        {avatarNode}
+        <span {...stylex.props(styles.tileTitle, active && styles.tileTitleActive)}>{title}</span>
+      </>
+    ) : (
+      <>
+        {avatarNode}
         <Flexbox
           flex={1}
           gap={2}
