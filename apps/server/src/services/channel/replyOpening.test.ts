@@ -14,6 +14,8 @@ vi.mock('@/database/repositories/channel', () => ({
   },
 }));
 vi.mock('@/server/services/bot/wake/opener', () => ({ createReplyOpener: vi.fn() }));
+// Unknown by default: the Agent's last run was not refused by a usage window.
+vi.mock('./quotaReset', () => ({ knownQuotaReset: vi.fn() }));
 
 const candidate = {
   addressed: true,
@@ -139,6 +141,35 @@ describe('openChannelReply', () => {
 
     expect(executions.open).toHaveBeenCalledWith('channel', 'job', {
       ack: undefined,
+      threadTitle: undefined,
+    });
+  });
+
+  it('does not acknowledge when the Agent’s usage window is known to be closed', async () => {
+    const opener = vi.fn();
+    const quotaReset = vi.fn().mockResolvedValue(Date.parse('2026-11-18T07:00:00Z'));
+
+    await openChannelReply({} as never, 'channel', 'job', {
+      createOpener: () => opener,
+      quotaReset,
+    });
+
+    expect(quotaReset).toHaveBeenCalledWith(candidate);
+    expect(opener).not.toHaveBeenCalled();
+    // Opened with nothing, so the run starts in place and its refusal is the reply's outcome.
+    expect(executions.open).toHaveBeenCalledWith('channel', 'job', {});
+  });
+
+  it('acknowledges as usual when the usage check fails', async () => {
+    const opener = vi.fn().mockResolvedValue({ ack: 'On it.', placement: 'channel' });
+
+    await openChannelReply({} as never, 'channel', 'job', {
+      createOpener: () => opener,
+      quotaReset: vi.fn().mockRejectedValue(new Error('db down')),
+    });
+
+    expect(executions.open).toHaveBeenCalledWith('channel', 'job', {
+      ack: 'On it.',
       threadTitle: undefined,
     });
   });

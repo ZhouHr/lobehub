@@ -9,13 +9,30 @@ import { REPLY_OPENER_TIMEOUT_MS } from '@/server/services/bot/BotMessageRouter/
 import type { ReplyOpener } from '@/server/services/bot/wake/opener';
 import { createReplyOpener } from '@/server/services/bot/wake/opener';
 
+import { knownQuotaReset } from './quotaReset';
+
 const log = debug('lobe-server:channel:reply-opening');
 
 export interface OpenChannelReplyDeps {
   /** Builds the opener for a candidate; defaults to the bot's, run as the requester. */
   createOpener?: (candidate: ChannelOpeningCandidate) => ReplyOpener;
+  /** When the Agent's usage window reopens, if a known one is still closed; see `knownQuotaReset`. */
+  quotaReset?: (candidate: ChannelOpeningCandidate) => Promise<number | undefined>;
   timeoutMs?: number;
 }
+
+/** A failed check is no reason to skip the acknowledgement. */
+const closedQuotaWindow = async (
+  db: LobeChatDatabase,
+  candidate: ChannelOpeningCandidate,
+  deps: OpenChannelReplyDeps,
+) => {
+  try {
+    return await (deps.quotaReset ?? ((entry) => knownQuotaReset(db, entry)))(candidate);
+  } catch (error) {
+    log('quota check failed, opening as usual: %O', error);
+  }
+};
 
 const describe = (message: ChannelContextMessage, agentId: string) =>
   `${message.author.type === 'agent' && message.author.id === agentId ? 'Assistant' : message.author.name}: ${message.content}`;
@@ -76,7 +93,8 @@ const decide = async (
  * job, before the claim, so the run's topic, branch and worktree follow the Thread.
  *
  * Never throws. A failed or slow opener is recorded as an opening that changed nothing, and the
- * reply starts where it was asked.
+ * reply starts where it was asked. So is a job whose Agent was just refused by a usage window
+ * that has not reopened yet: the opener is not asked, so no acknowledgement precedes the refusal.
  */
 export const openChannelReply = async (
   db: LobeChatDatabase,
@@ -88,6 +106,16 @@ export const openChannelReply = async (
   try {
     const candidate = await executions.openingCandidate(channelId, jobId);
     if (!candidate) return;
+
+    // The Agent's last run was refused by a usage window that is still closed: an acknowledgement
+    // would promise work the run cannot do. It opens with nothing and starts where it was asked,
+    // so the refusal shows as its failure instead; a window that reopened early still answers.
+    const resetsAt = await closedQuotaWindow(db, candidate, deps);
+    if (resetsAt) {
+      const opened = await executions.open(channelId, jobId, {});
+      log('job %s opened=%s without ack: quota closed until %s', jobId, opened, resetsAt);
+      return;
+    }
 
     const startedAt = Date.now();
     let opening: Awaited<ReturnType<ReplyOpener>> | undefined;
