@@ -32,6 +32,7 @@ import {
   memberEnvironment,
   requireAgentMember,
   requireChannelAgent,
+  sharedAgentOwner,
 } from './agent';
 import { openAgentPair } from './agentPair';
 import { channelAvatarMembers } from './avatars';
@@ -55,15 +56,15 @@ import {
 import { joinPublicChannel, listJoinableChannels } from './publicAccess';
 import { retryJob } from './retry';
 import { retryRouting } from './routing';
-import type { ChannelSendInput } from './send';
 import { type ChannelSearchOptions, searchChannelMessages } from './search';
+import type { ChannelSendInput } from './send';
 import { sendMessage } from './send';
 import type { ChannelStopScope } from './stop';
 import { stopScope } from './stop';
 import { channelThreadMentions } from './threadMentions';
 import { audit, lockChannel } from './transaction';
 import type { ChannelAccess, ChannelAgentPairAccess, ChannelWriteOptions } from './types';
-import { createChannelThread, readChannelView } from './view';
+import { createChannelThread, readChannelView, viewerJobs } from './view';
 
 export type { ChannelAddAgentInput } from './agent';
 export { memberEnvironment } from './agent';
@@ -508,18 +509,14 @@ export class ChannelRepository {
         if (access.channel.isDeleted) throw new ChannelError('NOT_FOUND', 'Channel not found');
         const admin = hasRole(access.member.role, 'admin');
         const view = await readChannelView(tx, channelId, options, this.userId);
+        // Same test as `list`; the composer reads it from here to hide upload.
+        const sharedAgent = !!(await sharedAgentOwner(tx, access.channel, this.userId));
         return {
-          channel: { ...access.channel, canDelete: admin },
+          channel: { ...access.channel, canDelete: admin, sharedAgent },
           joined: true,
           ...view,
-          jobs: view.jobs.map(({ requesterMemberId, topicId, topicOwnerId, ...job }) => ({
-            ...job,
-            // Mirrors `stop`: the requester or an admin.
-            canStop: admin || requesterMemberId === access.member.id,
-            // Only the viewer who runs the reply can follow it into its topic; for anyone else
-            // the job carries no topic at all.
-            ...(topicId && topicOwnerId === this.userId ? { topicId } : {}),
-          })),
+          // Mirrors `stop`: the requester or an admin.
+          jobs: viewerJobs(view.jobs, this.userId, (id) => admin || id === access.member.id),
         };
       },
       { allowArchived: true, allowTrashed: true },

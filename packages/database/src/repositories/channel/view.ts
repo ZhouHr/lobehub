@@ -374,6 +374,21 @@ const memberDeviceNames = async (tx: Transaction, channelId: string, members: Me
   return names;
 };
 
+/**
+ * A view's jobs as one viewer sees them: who may stop each, and the run's topic only for the
+ * viewer who runs the reply; for anyone else the job carries no topic at all.
+ */
+export const viewerJobs = (
+  jobs: Awaited<ReturnType<typeof readChannelView>>['jobs'],
+  viewerUserId: string,
+  canStop: (requesterMemberId: string | null) => boolean,
+) =>
+  jobs.map(({ requesterMemberId, topicId, topicOwnerId, ...job }) => ({
+    ...job,
+    canStop: canStop(requesterMemberId),
+    ...(topicId && topicOwnerId === viewerUserId ? { topicId } : {}),
+  }));
+
 export const readChannelView = async (
   tx: Transaction,
   channelId: string,
