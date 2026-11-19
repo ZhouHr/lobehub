@@ -369,3 +369,20 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://192.168.197.152:3210/api
    ```
 
 `.dockerignore` 已排除 `docker-compose/`，避免把部署数据目录（root 权限）打进构建上下文。
+
+
+### 10.5 无邮件功能时如何注册
+
+可以**不依赖邮件直接注册**：
+
+- 注册页：`http://192.168.197.152:3210/signup`
+- 邮箱只作为账号标识；`AUTH_EMAIL_VERIFICATION` 默认关闭，不要求点击验证链接。
+- `AUTH_DISABLE_EMAIL_PASSWORD` 未开启，邮箱/密码注册保持开放；密码至少 8 位，最长 64 位。
+
+自托管未配置 SMTP 时，注册本身仍然成功（实测 `POST /api/auth/sign-up/email` 返回 200，随后 `sign-in/email` 返回 200）。为了让注册流程不因发送验证邮件而报错，`emailVerification.sendOnSignUp` 已跟随 `AUTH_EMAIL_VERIFICATION`：未要求验证时不发送验证邮件。
+
+注意：
+
+- “忘记密码”仍需要 SMTP；未配置时请用第 10.1 节的管理员重置方法。
+- 如果希望开启邮箱验证或邮件重置，配置 `SMTP_USER`、`SMTP_PASS`、SMTP host/port，并设置 `AUTH_EMAIL_VERIFICATION=1`，重启 `lobe`。
+- `admin@ai02.local` 不是可收信的真实邮箱；管理员如需邮件能力，请在账号设置里改成真实邮箱，或重新注册一个真实邮箱账号。
