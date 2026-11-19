@@ -11,6 +11,7 @@
 services:
   # 新增的队列层：OpenAI 兼容 /v1/videos，单并发 + Redis FIFO
   gufo-gateway:
+    image: ${GUFO_GATEWAY_IMAGE:-lobe-gufo-gateway:latest}
     build:
       context: ../../apps/gufo-gateway
     container_name: gufo-gateway

@@ -59,6 +59,18 @@ curl -s http://127.0.0.1:8080/v1/videos \
 
 一期是全局 FIFO：所有用户共用一条队列，`MAX_QUEUE` 控制上限。二期如果要按用户公平排队，需要 LobeHub 在请求里带上用户标识，网关再按用户限制在途任务数。
 
+## Prometheus 抓取示例
+
+```yaml
+scrape_configs:
+  - job_name: gufo-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['gufo-gateway:8080']
+```
+
+建议告警：`gufo_gateway_jobs_total{status="failed"}` 速率上升、`gufo_gateway_upstream_errors_total` 持续增长、ai07 GTT 接近 64 GiB 或 GPU 温度异常。
+
 ## 安全
 
 - 网关本身不做 TLS；ai01 上应放在 Nginx/Caddy 后面，或只让容器网络访问。
