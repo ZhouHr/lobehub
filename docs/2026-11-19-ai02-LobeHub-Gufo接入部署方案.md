@@ -1,7 +1,7 @@
-# ai01 LobeHub 接入 ai07 Gufo MiniMax H3 部署方案
+# ai02 LobeHub 接入 ai07 Gufo MiniMax H3 部署方案
 
 > 日期：2026-11-19
-> 适用范围：ai01（192.168.197.151）自托管 LobeHub + ai07（192.168.197.157）gufo
+> 适用范围：ai02（192.168.197.152）自托管 LobeHub + ai07（192.168.197.157）gufo
 > 目标：在 LobeHub 视频页使用 ai07 的 MiniMax H3，支持多人排队、首尾帧、可选时长
 
 ---
@@ -12,16 +12,16 @@
 浏览器（多人）
    │
    ▼
-ai01: LobeHub（自定义镜像，含 gufo provider）
+ai02: LobeHub（自定义镜像，含 gufo provider）
    │  provider baseURL = http://gufo-gateway:8080/v1
    ▼
-ai01: gufo-gateway（单并发 FIFO + Redis）
+ai02: gufo-gateway（单并发 FIFO + Redis）
    │  429/503 重试、鉴权、取消、/metrics
    ▼
 ai07: gufo 8080（OpenAI 兼容 /v1/videos）
 ```
 
-- gufo 自身 1 执行 + 1 排队，所以队列放在 ai01，而不是让 LobeHub 直接打 ai07。
+- gufo 自身 1 执行 + 1 排队，所以队列放在 ai02，而不是让 LobeHub 直接打 ai07。
 - 网关返回的 `inferenceId` 是 `gufo-<uuid>`；LobeHub 会用它轮询 `GET /v1/videos/{id}` 和下载 `/content`。
 - 网关**不返回 `url` 字段**，让 LobeHub 自己拼 `${baseURL}/videos/{id}/content`，保证下载经过网关。
 
@@ -42,7 +42,7 @@ ai07: gufo 8080（OpenAI 兼容 /v1/videos）
 | `apps/server/src/routers/lambda/video/index.ts` | gufo 首/尾帧在 lambda 中转 data URL |
 | `apps/server/src/services/generation/videoReferenceImage.ts` | S3 URL → base64 data URL |
 | `apps/gufo-gateway/` | 新的排队网关（Node + Redis） |
-| `docker-compose/gufo/docker-compose.yml` | ai01 叠加编排 |
+| `docker-compose/gufo/docker-compose.yml` | ai02 叠加编排 |
 
 模型矩阵：
 
@@ -68,10 +68,10 @@ ai07: gufo 8080（OpenAI 兼容 /v1/videos）
 因为新增了 provider，官方 `lobehub/lobehub` 镜像不含这些代码，必须用自己的镜像：
 
 ```bash
-# 在仓库根目录（ai01 或 CI）
+# 在仓库根目录（ai02 或 CI）
 docker build -t registry.local/lobehub:gufo .
 
-# 如果 ai01 是 ARM64
+# 如果 ai02 是 ARM64
 docker buildx build --platform linux/arm64 -t registry.local/lobehub:gufo .
 ```
 
@@ -87,7 +87,7 @@ docker run --rm --entrypoint node lobe-gufo-gateway:local --check src/index.mjs
 验证通过后再用叠加编排启动；如需固定镜像 tag，在 `.env` 设置
 `GUFO_GATEWAY_IMAGE=<registry>/lobe-gufo-gateway:<tag>`。
 
-### 3.2 准备 ai01 的 `.env`
+### 3.2 准备 ai02 的 `.env`
 
 在 `docker-compose/deploy` 使用的 `.env` 中增加：
 
@@ -157,7 +157,7 @@ curl -s http://127.0.0.1:18080/metrics
 - `gufo_gateway_rejected_total`
 - `gufo_gateway_upstream_errors_total`
 
-建议接入 ai01 现有 Prometheus/Grafana，并增加：
+建议接入 ai02 现有 Prometheus/Grafana，并增加：
 
 - 队列积压（可由 `jobs_total` 速率 + 日志估算）
 - 网关失败率、429/503 次数
@@ -203,4 +203,83 @@ gufo/ai07 不动即可。
 - exact 5s 约 18.6 分钟，fullres 1s 约 12 分钟；不要把它们当默认模型。
 - gufo 产物 TTL 默认 1 小时；建议把 ai07 的 `--ttl` 调到 7200–14400，避免排队很久后产物被删。
 - 网关一期是全局 FIFO，不按用户公平调度。
-- LobeHub 的 `after()` 轮询是进程内调度；ai01 单实例可用，多副本部署需要额外的任务恢复机制。
+- LobeHub 的 `after()` 轮询是进程内调度；ai02 单实例可用，多副本部署需要额外的任务恢复机制。
+
+
+---
+
+## 9. 实际部署结果（2026-11-19）
+
+### 9.1 主机与访问
+
+| 项 | 值 |
+|---|---|
+| 主机 | ai02（192.168.197.152），x86_64，12 核，62 GiB，Docker 29.3 + compose 5.1.1 |
+| 代码目录 | `/home/ai/lobehub` |
+| LobeHub | `http://192.168.197.152:3210`（登录页 `/signin`） |
+| 镜像 | `lobehub:gufo`（1.53 GB）、`lobe-gufo-gateway:local` |
+| 数据库 | `lobe-postgres`（paradedb/paradedb:latest-pg17） |
+| S3 | `lobe-rustfs`，`http://192.168.197.152:9000` |
+| 队列 | `gufo-gateway`，宿主 `127.0.0.1:18080`，容器内 `8080` |
+| 初始管理员 | `admin@ai02.local`（密码由部署时生成，未写入仓库） |
+
+启动命令：
+
+```bash
+cd ~/lobehub
+docker compose --env-file docker-compose/deploy/.env \
+  -f docker-compose/deploy/docker-compose.yml \
+  -f docker-compose/gufo/docker-compose.yml up -d
+```
+
+容器启停/日志：
+
+```bash
+docker ps --format '{{.Names}}	{{.Status}}'
+docker logs -f lobehub
+docker logs -f gufo-gateway
+docker exec lobe-postgres psql -U postgres -d lobechat -c 'select id,enabled from ai_providers;'
+```
+
+### 9.2 Gufo Provider 配置
+
+通过 LobeHub tRPC 创建并启用：
+
+```json
+{
+  "id": "gufo",
+  "name": "Gufo (ai07)",
+  "source": "builtin",
+  "settings": { "sdkType": "openai" },
+  "keyVaults": {
+    "apiKey": "<GUFO_GATEWAY_TOKEN>",
+    "baseURL": "http://gufo-gateway:8080/v1"
+  }
+}
+```
+
+数据库确认：`ai_providers` 中 `gufo` 为 `enabled=t`、`source=builtin`。
+
+### 9.3 真实验收证据
+
+| 任务 | 结果 |
+|---|---|
+| 1s aggressive 512×512 | 成功；`duration=0.93s`，MP4 198,203 字节 |
+| 5s aggressive 512×512 | 成功；`duration=5.18s`，MP4 997,539 字节 |
+| 排队任务（第二个 1s） | `async_tasks.metadata.queuePosition=1`；前一个完成后成功 |
+| S3 产物 | `HEAD` 返回 200，`Content-Type: video/mp4`，封面 32,736 字节 |
+| LobeHub 播放地址 | `/f/file_Agjdjh32TBV3` → 302 到 RustFS 签名 URL |
+| 登录页 | `GET /signin` 200 `text/html` |
+
+LobeHub 生成状态接口返回 `generation.asset`（duration/width/height/url/coverUrl），说明下载、转码、封面上传全链路通过。
+
+### 9.4 ai02 构建特殊处理
+
+ai02 无法访问 `https://cdn.sheetjs.com`，导致 `xlsx@0.20.3` 依赖安装失败。部署时做了以下**仅限 ai02 构建副本**的临时处理（未提交到仓库）：
+
+- 从本地已安装的 `xlsx` 包打包 `xlsx-0.20.3.tgz`，复制到
+  `packages/file-loaders/` 与 `packages/eval-dataset-parser/`；
+- 将两处 `package.json` 的 `xlsx` 改为 `file:xlsx-0.20.3.tgz`；
+- 使用 `docker buildx build --load --build-arg USE_CN_MIRROR=true`（npmmirror）加速 npm 安装。
+
+后续在 ai02 更新代码并重建镜像时，需要重新应用该处理；上游环境若能访问 SheetJS CDN 则不需要。
