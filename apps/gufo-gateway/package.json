@@ -9,7 +9,7 @@
     "start": "node src/index.mjs"
   },
   "dependencies": {
-    "redis": "^4.7.0"
+    "redis": "4.7.0"
   },
   "engines": {
     "node": ">=20"
