@@ -75,6 +75,18 @@ docker build -t registry.local/lobehub:gufo .
 docker buildx build --platform linux/arm64 -t registry.local/lobehub:gufo .
 ```
 
+### 3.1.1 预构建并验证网关镜像
+
+网关是独立 Node 服务，可以单独构建，构建完成后先做语法级验证：
+
+```bash
+docker build -t lobe-gufo-gateway:local apps/gufo-gateway
+docker run --rm --entrypoint node lobe-gufo-gateway:local --check src/index.mjs
+```
+
+验证通过后再用叠加编排启动；如需固定镜像 tag，在 `.env` 设置
+`GUFO_GATEWAY_IMAGE=<registry>/lobe-gufo-gateway:<tag>`。
+
 ### 3.2 准备 ai01 的 `.env`
 
 在 `docker-compose/deploy` 使用的 `.env` 中增加：
