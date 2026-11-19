@@ -283,3 +283,89 @@ ai02 无法访问 `https://cdn.sheetjs.com`，导致 `xlsx@0.20.3` 依赖安装�
 - 使用 `docker buildx build --load --build-arg USE_CN_MIRROR=true`（npmmirror）加速 npm 安装。
 
 后续在 ai02 更新代码并重建镜像时，需要重新应用该处理；上游环境若能访问 SheetJS CDN 则不需要。
+
+
+---
+
+## 10. 常见问题与运维
+
+### 10.1 忘记密码 / 邮件收不到
+
+当前部署**未配置 SMTP**，better-auth 的 `sendResetPassword` 与验证邮件都会失败，日志为：
+
+```text
+SMTP_USER and SMTP_PASS environment variables are required to use email service
+```
+
+因此「忘记密码」邮件不会送达。管理员密码按 better-auth 的 scrypt 格式直接重置：
+
+```bash
+# 在本地/ai02 生成 salt:hash（N=16384, r=16, p=1, dkLen=64；salt 为 16 字节 hex）
+node - <<'JS'
+const crypto = require('crypto');
+const password = '你的新密码';
+const salt = crypto.randomBytes(16).toString('hex');
+const hash = crypto.scryptSync(password, salt, 64, { N: 16384, r: 16, p: 1 }).toString('hex');
+console.log(`${salt}:${hash}`);
+JS
+```
+
+```bash
+# 在 ai02 写入 accounts 表
+docker exec lobe-postgres psql -U postgres -d lobechat -c \
+  "update accounts set password='<salt>:<hash>' \
+   where provider_id='credential' \
+   and user_id=(select id from users where email='admin@ai02.local');"
+```
+
+验证：
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://192.168.197.152:3210/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: http://192.168.197.152:3210' \
+  -d '{"email":"admin@ai02.local","password":"你的新密码"}'
+```
+
+如需恢复邮件重置，在 `.env` 配置 `SMTP_USER`、`SMTP_PASS`（及 SMTP host/port）后重启 `lobe`。本次部署已直接重置管理员密码；新密码由交付说明提供。
+
+### 10.2 管理 LLM 连接的位置
+
+- 页面：**设置 → 服务商**
+- 直接地址：`http://192.168.197.152:3210/settings/provider`
+- Gufo 详情：`http://192.168.197.152:3210/settings/provider/gufo`
+
+在 Gufo (ai07) 卡片中可以修改：
+
+- Base URL：`http://gufo-gateway:8080/v1`
+- API Key：网关 `GUFO_GATEWAY_TOKEN`
+- 模型启用/禁用：同一服务商详情页的模型列表
+
+其他 LLM（OpenAI、DeepSeek 等）也在同一「服务商」页面配置。
+
+### 10.3 侧边栏视频入口
+
+左侧栏底部现在同时提供：
+
+- **生成**（图片，`/image`）
+- **视频**（`/video`）
+
+已有用户保存的侧边栏布局会自动补上 `video`（`withAllKnownKeys` 逻辑），位置在 `image` 之后；如果仍未显示，打开「自定义侧边栏」把 Video 拖入并保存。
+
+### 10.4 更新代码后重建镜像
+
+1. 只同步源码（保留 ai02 上的 `.env`、`docker-compose/deploy/data` 与 xlsx 本地 tarball 补丁）。
+2. 重新应用 `xlsx` 的 `file:xlsx-0.20.3.tgz` 处理（见 9.4）。
+3. 构建：
+   ```bash
+   cd ~/lobehub
+   docker buildx build --load --build-arg USE_CN_MIRROR=true -t lobehub:gufo .
+   ```
+4. 只重建 LobeHub：
+   ```bash
+   docker compose --env-file docker-compose/deploy/.env \
+     -f docker-compose/deploy/docker-compose.yml \
+     -f docker-compose/gufo/docker-compose.yml up -d --no-deps lobe
+   ```
+
+`.dockerignore` 已排除 `docker-compose/`，避免把部署数据目录（root 权限）打进构建上下文。
