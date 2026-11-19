@@ -15,6 +15,7 @@ ai07 gufo（MiniMax H3）前面的排队网关。它把 gufo 的异步视频接�
 | `POST` | `/v1/videos` | 入队，返回 `{ id, status: "queued", queue_position }` |
 | `GET` | `/v1/videos/{id}` | `queued` / `in_progress` / `completed` / `failed` |
 | `GET` | `/v1/videos/{id}/content` | 完成后代理 MP4，支持 Range |
+| `GET` | `/v1/models` | 当前可用的 4 个 H3 模型（`capability: video`） |
 | `DELETE` | `/v1/videos/{id}` | 取消排队或运行中的任务 |
 | `GET` | `/health` | 存活与上游地址 |
 | `GET` | `/metrics` | Prometheus 文本指标 |
@@ -57,7 +58,9 @@ curl -s http://127.0.0.1:8080/v1/videos \
 
 ## 限流与公平性
 
-一期是全局 FIFO：所有用户共用一条队列，`MAX_QUEUE` 控制上限。二期如果要按用户公平排队，需要 LobeHub 在请求里带上用户标识，网关再按用户限制在途任务数。
+一期是全局 FIFO：所有用户共用一条队列，`MAX_QUEUE` 控制“排队 + 运行中”的总上限。入队用 Redis Lua 原子检查，worker 用 `BLMOVE` 原子地把任务从 `gufo:queue` 移到 `gufo:running`，并发提交不会超卖。二期如果要按用户公平排队，需要 LobeHub 在请求里带上用户标识，网关再按用户限制在途任务数。
+
+**重启行为**：排队中的任务在 Redis 里，重启后继续排队；已经进入 `gufo:running` 的任务不会自动恢复轮询（当前版本），需要重新提交。
 
 ## Prometheus 抓取示例
 

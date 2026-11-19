@@ -17,11 +17,19 @@ const {
 const UPSTREAM = GUFO_UPSTREAM.replace(/\/+$/, '');
 const QUEUE_KEY = 'gufo:queue';
 const JOB_PREFIX = 'gufo:job:';
-const ACTIVE_KEY = 'gufo:active';
+const RUNNING_KEY = 'gufo:running';
 const POLL_INTERVAL_MS = 5_000;
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
-const MAX_QUEUE_SIZE = Number(MAX_QUEUE);
+const ENQUEUE_SCRIPT = `
+local queued = redis.call('LLEN', KEYS[1])
+local running = redis.call('LLEN', KEYS[2])
+if queued + running >= tonumber(ARGV[1]) then return 0 end
+redis.call('RPUSH', KEYS[1], ARGV[2])
+return 1
+`;
+
+const MAX_QUEUE_SIZE = Number.isFinite(Number(MAX_QUEUE)) ? Number(MAX_QUEUE) : 10;
 const TASK_TIMEOUT = Number(TASK_TIMEOUT_MS);
 const MAX_WAIT = Number(MAX_WAIT_MS);
 const JOB_TTL = Number(JOB_TTL_SECONDS);
@@ -260,10 +268,10 @@ async function cancelUpstream(gufoId) {
 
 async function worker() {
   while (true) {
-    const popped = await workerRedis.blPop(QUEUE_KEY, 5);
-    if (!popped) continue;
+    const moved = await workerRedis.blMove(QUEUE_KEY, RUNNING_KEY, 'LEFT', 'LEFT', 5);
+    if (!moved) continue;
 
-    const id = popped.element;
+    const id = moved;
     const job = await getJob(id, workerRedis);
     if (!job || job.status !== 'queued') continue;
 
@@ -271,8 +279,6 @@ async function worker() {
       await failJob(id, new Error('queue wait exceeded MAX_WAIT_MS'), workerRedis);
       continue;
     }
-
-    await workerRedis.set(ACTIVE_KEY, id, { EX: Math.ceil(MAX_WAIT / 1000) });
 
     await workerRedis.hSet(jobKey(id), {
       startedAt: String(Date.now()),
@@ -286,19 +292,12 @@ async function worker() {
     } catch (error) {
       await failJob(id, error, workerRedis);
     } finally {
-      await workerRedis.del(ACTIVE_KEY);
+      await workerRedis.lRem(RUNNING_KEY, 0, id);
     }
   }
 }
 
 async function handleCreate(req, res) {
-  const inFlight = (await redis.lLen(QUEUE_KEY)) + (await redis.exists(ACTIVE_KEY));
-
-  if (inFlight >= MAX_QUEUE_SIZE) {
-    metrics.rejected += 1;
-    return sendError(res, 429, 'gufo queue is full, please retry later', 'queue_full');
-  }
-
   let body;
   try {
     body = validateCreate(await readJsonBody(req));
@@ -321,7 +320,19 @@ async function handleCreate(req, res) {
     ...(body.last_frame ? { last_frame: body.last_frame } : {}),
   });
 
-  await redis.rPush(QUEUE_KEY, id);
+  // Atomic admission: queue depth + one running worker. A plain lLen/exists check
+  // races when several users submit at once.
+  const admitted = await redis.eval(ENQUEUE_SCRIPT, {
+    arguments: [String(MAX_QUEUE_SIZE), id],
+    keys: [QUEUE_KEY, RUNNING_KEY],
+  });
+
+  if (admitted !== 1) {
+    await redis.del(jobKey(id));
+    metrics.rejected += 1;
+    return sendError(res, 429, 'gufo queue is full, please retry later', 'queue_full');
+  }
+
   log('info', { event: 'job_queued', id, model: body.model, size: body.size, seconds: body.seconds });
 
   sendJson(res, 200, {
@@ -455,6 +466,13 @@ async function handleRequest(req, res) {
 
   if (!isAuthorized(req)) {
     return sendError(res, 401, 'unauthorized', 'unauthorized');
+  }
+
+  if (path === '/v1/models' && req.method === 'GET') {
+    return sendJson(res, 200, {
+      data: [...ALLOWED_MODELS].map((id) => ({ capability: 'video', id, object: 'model' })),
+      object: 'list',
+    });
   }
 
   if (path === '/v1/videos' && req.method === 'POST') {
