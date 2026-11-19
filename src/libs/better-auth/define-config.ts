@@ -182,6 +182,9 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
     emailVerification: {
       autoSignInAfterVerification: true,
       expiresIn: VERIFICATION_LINK_EXPIRES_IN,
+      // Only send a verification link when this deployment actually requires verification.
+      // Self-hosted deployments without SMTP still accept email/password sign-ups.
+      sendOnSignUp: authEnv.AUTH_EMAIL_VERIFICATION,
       sendVerificationEmail: async ({ user, url }, request) => {
         // Skip sending verification link email for mobile clients (Expo/React Native)
         // Mobile clients use OTP verification instead, triggered manually via emailOTP plugin
