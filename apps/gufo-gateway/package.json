@@ -1,0 +1,17 @@
+{
+  "name": "gufo-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Queueing gateway for the ai07 gufo MiniMax H3 video service",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
+  "dependencies": {
+    "redis": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

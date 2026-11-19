@@ -32,6 +32,7 @@ import GithubCopilotProvider from './githubCopilot';
 import GLMCodingPlanProvider from './glmCodingPlan';
 import GoogleProvider from './google';
 import GroqProvider from './groq';
+import GufoProvider from './gufo';
 import HigressProvider from './higress';
 import HuggingFaceProvider from './huggingface';
 import HunyuanProvider from './hunyuan';
@@ -175,6 +176,7 @@ export const DEFAULT_MODEL_PROVIDER_LIST = [
   AiHubMixProvider,
   OpenRouterProvider,
   FalProvider,
+  GufoProvider,
   ElevenLabsProvider,
   FishAudioProvider,
   DoubaoSpeechProvider,
@@ -342,6 +344,7 @@ export { default as GithubCopilotProviderCard } from './githubCopilot';
 export { default as GLMCodingPlanProviderCard } from './glmCodingPlan';
 export { default as GoogleProviderCard } from './google';
 export { default as GroqProviderCard } from './groq';
+export { default as GufoProviderCard } from './gufo';
 export { default as HigressProviderCard } from './higress';
 export { default as HuggingFaceProviderCard } from './huggingface';
 export { default as HunyuanProviderCard } from './hunyuan';

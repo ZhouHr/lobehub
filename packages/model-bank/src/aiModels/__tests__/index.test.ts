@@ -217,6 +217,59 @@ describe('MiniMax video models', () => {
   });
 });
 
+describe('gufo video models', () => {
+  it('registers the ai07 presets with a single size each', () => {
+    const models = LOBE_DEFAULT_MODEL_LIST.filter(
+      (model) => model.providerId === ModelProvider.Gufo,
+    );
+
+    expect(models.map((model) => model.id)).toEqual([
+      'minimax-h3-fast',
+      'minimax-h3-aggressive',
+      'minimax-h3',
+      'minimax-h3-fullres',
+    ]);
+
+    expect(models.every((model) => model.type === 'video' && model.enabled)).toBe(true);
+  });
+
+  it('limits fullres to 1344x768 and 1s, and exact to 1/5s', () => {
+    const fullres = LOBE_DEFAULT_MODEL_LIST.find(
+      (model) => model.providerId === ModelProvider.Gufo && model.id === 'minimax-h3-fullres',
+    );
+    const exact = LOBE_DEFAULT_MODEL_LIST.find(
+      (model) => model.providerId === ModelProvider.Gufo && model.id === 'minimax-h3',
+    );
+
+    expect(fullres?.parameters).toEqual(
+      expect.objectContaining({
+        duration: expect.objectContaining({ enum: [1] }),
+        size: expect.objectContaining({ enum: ['1344x768'] }),
+      }),
+    );
+    expect(exact?.parameters).toEqual(
+      expect.objectContaining({
+        duration: expect.objectContaining({ enum: [1, 5] }),
+        size: expect.objectContaining({ enum: ['512x512'] }),
+      }),
+    );
+  });
+
+  it('keeps first/last frames but no reference pool (gufo only runs FL2VA)', () => {
+    const fast = LOBE_DEFAULT_MODEL_LIST.find(
+      (model) => model.providerId === ModelProvider.Gufo && model.id === 'minimax-h3-fast',
+    );
+
+    expect(fast?.parameters).toEqual(
+      expect.objectContaining({
+        endImageUrl: expect.objectContaining({ default: null }),
+        imageUrl: expect.objectContaining({ default: null }),
+      }),
+    );
+    expect((fast?.parameters as { imageUrls?: unknown })?.imageUrls).toBeUndefined();
+  });
+});
+
 describe('Google rolling model aliases', () => {
   it('tracks the current Flash and Flash-Lite model versions', () => {
     const googleModels = LOBE_DEFAULT_MODEL_LIST.filter((model) => model.providerId === 'google');

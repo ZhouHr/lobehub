@@ -29,6 +29,7 @@ import { LobeGithubCopilotAI } from './providers/githubCopilot';
 import { LobeGLMCodingPlanAI } from './providers/glmCodingPlan';
 import { LobeGoogleAI } from './providers/google';
 import { LobeGroq } from './providers/groq';
+import { LobeGufoAI } from './providers/gufo';
 import { LobeHigressAI } from './providers/higress';
 import { LobeHuggingFaceAI } from './providers/huggingface';
 import { LobeHunyuanAI } from './providers/hunyuan';
@@ -118,6 +119,7 @@ export const providerRuntimeMap = {
   giteeai: LobeGiteeAI,
   github: LobeGithubAI,
   githubcopilot: LobeGithubCopilotAI,
+  gufo: LobeGufoAI,
   google: LobeGoogleAI,
   glmcodingplan: LobeGLMCodingPlanAI,
   groq: LobeGroq,

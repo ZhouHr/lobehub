@@ -17,6 +17,7 @@ import { isRecord } from '@lobechat/utils/object';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq, inArray } from 'drizzle-orm';
+import { ModelProvider } from 'model-bank';
 import { supportsConversationalVideoEdit } from 'model-bank/standardParameters';
 import { z } from 'zod';
 
@@ -46,6 +47,7 @@ import { FileService } from '@/server/services/file';
 import { getVideoAvgLatencies, getVideoLatencyKey } from '@/server/services/generation/latency';
 import { processBackgroundVideoPolling } from '@/server/services/generation/videoBackgroundPolling';
 import { fillVideoPricingDefaults } from '@/server/services/generation/videoPricingDefaults';
+import { inlineVideoReferenceImage } from '@/server/services/generation/videoReferenceImage';
 import { after } from '@/server/utils/scheduleAfterResponse';
 import { AsyncTaskStatus, AsyncTaskType } from '@/types/asyncTask';
 
@@ -264,6 +266,27 @@ export const videoRouter = router({
 
         if (Object.keys(updates).length > 0) {
           generationParams = { ...params, ...updates };
+        }
+      }
+
+      // gufo never fetches remote URLs: inline the uploaded first/last frames as data
+      // URLs for the provider request only. The database keeps the original file keys.
+      if (provider === ModelProvider.Gufo) {
+        if (typeof generationParams.imageUrl === 'string' && generationParams.imageUrl) {
+          generationParams = {
+            ...generationParams,
+            imageUrl: await inlineVideoReferenceImage(fileService, generationParams.imageUrl),
+          };
+        }
+
+        if (typeof generationParams.endImageUrl === 'string' && generationParams.endImageUrl) {
+          generationParams = {
+            ...generationParams,
+            endImageUrl: await inlineVideoReferenceImage(
+              fileService,
+              generationParams.endImageUrl,
+            ),
+          };
         }
       }
 

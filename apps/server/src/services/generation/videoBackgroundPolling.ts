@@ -1,4 +1,4 @@
-import { ASYNC_TASK_TIMEOUT } from '@lobechat/business-config/server';
+import { VIDEO_TASK_TIMEOUT } from '@lobechat/business-config/server';
 import {
   buildMappedBusinessModelFields,
   resolveBusinessModelMapping,
@@ -269,7 +269,7 @@ async function pollUntilCompletion(
   videoUrl: string;
 } | null> {
   const pollingInterval = 5000;
-  const maxRetries = Math.ceil(ASYNC_TASK_TIMEOUT / pollingInterval);
+  const maxRetries = Math.ceil(VIDEO_TASK_TIMEOUT / pollingInterval);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {

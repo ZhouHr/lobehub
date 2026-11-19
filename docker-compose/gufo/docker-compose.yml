@@ -1,0 +1,39 @@
+# ai01 叠加编排：为 LobeHub 增加 gufo 排队网关
+#
+# 基础编排仍是 docker-compose/deploy/docker-compose.yml，本文件只做增量：
+#   docker compose \
+#     -f docker-compose/deploy/docker-compose.yml \
+#     -f docker-compose/gufo/docker-compose.yml \
+#     up -d
+#
+# 需要自定义 LobeHub 镜像（包含 gufo provider），通过 LOBE_IMAGE 指定：
+#   LOBE_IMAGE=registry.local/lobehub:gufo
+services:
+  # 新增的队列层：OpenAI 兼容 /v1/videos，单并发 + Redis FIFO
+  gufo-gateway:
+    build:
+      context: ../../apps/gufo-gateway
+    container_name: gufo-gateway
+    environment:
+      GUFO_UPSTREAM: ${GUFO_UPSTREAM:-http://192.168.197.157:8080}
+      GATEWAY_TOKEN: ${GUFO_GATEWAY_TOKEN:?set GUFO_GATEWAY_TOKEN in .env}
+      MAX_QUEUE: ${GUFO_MAX_QUEUE:-10}
+      TASK_TIMEOUT_MS: ${GUFO_TASK_TIMEOUT_MS:-2700000}
+      MAX_WAIT_MS: ${GUFO_MAX_WAIT_MS:-3000000}
+      JOB_TTL_SECONDS: ${GUFO_JOB_TTL_SECONDS:-86400}
+      REDIS_URL: redis://redis:6379
+    ports:
+      # 只给宿主机排查用；LobeHub 走容器网络 http://gufo-gateway:8080
+      - '127.0.0.1:${GUFO_GATEWAY_PORT:-18080}:8080'
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - lobe-network
+
+  lobe:
+    image: ${LOBE_IMAGE:-lobehub/lobehub}
+    environment:
+      # gufo 长任务 + 多人排队：默认 59 分钟，可按部署调整
+      - 'VIDEO_TASK_TIMEOUT_MS=${VIDEO_TASK_TIMEOUT_MS:-3540000}'

@@ -30,6 +30,7 @@ export enum ModelProvider {
   GLMCodingPlan = 'glmcodingplan',
   Google = 'google',
   Groq = 'groq',
+  Gufo = 'gufo',
   Higress = 'higress',
   HuggingFace = 'huggingface',
   Hunyuan = 'hunyuan',
