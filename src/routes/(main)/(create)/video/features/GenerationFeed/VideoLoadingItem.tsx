@@ -1,7 +1,8 @@
 'use client';
 
-import { Block, Center, Progress, Spin } from '@lobehub/ui';
+import { Block, Center, Progress, Spin, Text } from '@lobehub/ui';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { MAX_ESTIMATED_PROGRESS, useEstimatedProgress } from '@/hooks/useEstimatedProgress';
 import { ElapsedTime } from '@/routes/(main)/(create)/image/features/GenerationFeed/GenerationItem/ElapsedTime';
@@ -20,7 +21,9 @@ interface VideoLoadingItemProps {
 
 const VideoLoadingItem = memo<VideoLoadingItemProps>(
   ({ generation, aspectRatio, avgLatencyMs }) => {
+    const { t } = useTranslation('video');
     const latency = avgLatencyMs && avgLatencyMs > 0 ? avgLatencyMs : DEFAULT_AVG_LATENCY_MS;
+    const queuePosition = generation.task.queuePosition;
     const isGenerating =
       generation.task.status === AsyncTaskStatus.Processing ||
       generation.task.status === AsyncTaskStatus.Pending;
@@ -43,6 +46,11 @@ const VideoLoadingItem = memo<VideoLoadingItemProps>(
       >
         <Center gap={8}>
           {progress !== null ? <Progress percent={progress} size={48} type="circle" /> : <Spin />}
+          {queuePosition != null && queuePosition > 0 && (
+            <Text fontSize={12} type={'secondary'}>
+              {t('generation.status.queued', { position: String(queuePosition) })}
+            </Text>
+          )}
           {progress === MAX_ESTIMATED_PROGRESS && (
             <ElapsedTime generationId={generation.id} isActive={isGenerating} />
           )}

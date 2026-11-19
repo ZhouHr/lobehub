@@ -44,6 +44,7 @@ export default {
   'generation.status.editing': 'Generating Edit...',
   'generation.status.failed': 'Generation Failed',
   'generation.status.generating': 'Generating...',
+  'generation.status.queued': 'Queued (position {{position}})',
   'generation.validation.endFrameRequiresStartFrame':
     'End frame cannot be used without a start frame. Please set a start frame first.',
   'generation.version.editedFrom': 'Edited from V{{version}}',

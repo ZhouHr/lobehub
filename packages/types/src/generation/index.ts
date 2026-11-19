@@ -106,6 +106,8 @@ export interface GenerationConfig {
 export interface GenerationAsyncTask {
   error?: AsyncTaskError;
   id: string;
+  /** Position in the provider queue while the task has not started yet. */
+  queuePosition?: number | null;
   status: AsyncTaskStatus;
 }
 

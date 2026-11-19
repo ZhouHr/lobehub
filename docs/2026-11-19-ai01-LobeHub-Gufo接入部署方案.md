@@ -140,8 +140,8 @@ curl -s -H "Authorization: Bearer $GUFO_GATEWAY_TOKEN" \
 
 - 网关并发 1，队列上限 `MAX_QUEUE=10`；LobeHub 提交的任务在网关里排队。
 - LobeHub 侧的 `VIDEO_TASK_TIMEOUT_MS` 默认 59 分钟，覆盖排队 + 生成；单个任务的实际上限由网关的 `TASK_TIMEOUT_MS`（45 分钟）和 `MAX_WAIT_MS`（50 分钟）控制。
-- 排队中的任务在 LobeHub 里显示为“生成中”；队列满时提交会失败并提示 `gufo queue is full`。
-- 如果后续要显示“排队第 N 位”，需要扩展 `PollVideoStatusResult` 与 asyncTask metadata；当前版本不显示位置。
+- 排队中的任务在 LobeHub 视频卡片上显示“排队中（第 N 位）”；位置由网关的 `queue_position` 经 asyncTask metadata 透传到前端。
+- 队列满时提交会失败并提示 `gufo queue is full`。
 
 ---
 

@@ -58,5 +58,6 @@
   "topic.title": "视频话题",
   "topic.untitled": "默认话题",
   "topic.visibility.existingLocked": "当前话题的可见性已固定。创建新话题后可选择不同空间。",
-  "topic.workspaceTitle": "工作区"
+  "topic.workspaceTitle": "工作区",
+  "generation.status.queued": "排队中（第 {{position}} 位）"
 }

@@ -27,6 +27,7 @@ interface OpenAIVideoStatusResponse {
   object?: string;
   progress?: number;
   prompt?: string;
+  queue_position?: number;
   seconds?: string;
   size?: string;
   status?: string;
@@ -103,8 +104,11 @@ export async function pollOpenAICompatibleVideoStatus(
     };
   }
 
-  // queued, in_progress, or any other status means still pending
-  return { status: 'pending' };
+  // queued, in_progress, or any other status means still pending.
+  // A queueing gateway can report the position while the job waits.
+  return typeof response.queue_position === 'number'
+    ? { queuePosition: response.queue_position, status: 'pending' }
+    : { status: 'pending' };
 }
 
 /**

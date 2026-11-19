@@ -262,6 +262,23 @@ describe('pollOpenAICompatibleVideoStatus', () => {
     expect(result).toEqual({ status: 'pending' });
   });
 
+  it('should expose a queueing gateway position while pending', async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: 'queued',
+        queue_position: 3,
+      }),
+    });
+
+    const result = await pollOpenAICompatibleVideoStatus('task-queued', {
+      apiKey: 'test-key',
+      baseURL: 'https://gufo-gateway:8080/v1',
+    });
+
+    expect(result).toEqual({ queuePosition: 3, status: 'pending' });
+  });
+
   it('should throw on HTTP error', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: false,

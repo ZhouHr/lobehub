@@ -31,6 +31,8 @@ const generationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
 export type GetGenerationStatusResult = {
   error: AsyncTaskError | null;
   generation: Generation | null;
+  /** Position in the ai07 gufo queue while the task is still queued. */
+  queuePosition?: number | null;
   status: AsyncTaskStatus;
 };
 
@@ -84,9 +86,11 @@ export const generationRouter = router({
       });
 
       const { status, error } = asyncTask;
+      const queuePosition = (asyncTask.metadata as Record<string, unknown> | null)?.queuePosition;
       const result: GetGenerationStatusResult = {
         error: null,
         generation: null,
+        queuePosition: typeof queuePosition === 'number' ? queuePosition : null,
         status: status as AsyncTaskStatus,
       };
 

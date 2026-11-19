@@ -58,5 +58,6 @@
   "topic.title": "Video Topics",
   "topic.untitled": "Default Topic",
   "topic.visibility.existingLocked": "Visibility is fixed for the current topic. Create a new topic to choose a different space.",
-  "topic.workspaceTitle": "Workspace"
+  "topic.workspaceTitle": "Workspace",
+  "generation.status.queued": "Queued (position {{position}})"
 }

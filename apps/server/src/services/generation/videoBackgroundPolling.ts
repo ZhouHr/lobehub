@@ -83,7 +83,26 @@ export async function processBackgroundVideoPolling(
     // `route` was pinned for the mapped model id at creation, so poll with that id too;
     // the user-facing alias may resolve to a router list that no longer holds the route.
     const { resolvedModelId: pollModelId } = await resolveBusinessModelMapping(provider, model);
-    const pollResult = await pollUntilCompletion(modelRuntime, inferenceId, pollModelId, route);
+    const pollResult = await pollUntilCompletion(
+      modelRuntime,
+      inferenceId,
+      pollModelId,
+      route,
+      async (queuePosition) => {
+        try {
+          const currentTask = await asyncTaskModel.findById(asyncTaskId);
+          const metadata = (currentTask?.metadata ?? {}) as Record<string, unknown>;
+
+          if (metadata.queuePosition === queuePosition) return;
+
+          await asyncTaskModel.update(asyncTaskId, {
+            metadata: { ...metadata, queuePosition },
+          });
+        } catch (queueError) {
+          log('Failed to persist queue position for task %s: %O', asyncTaskId, queueError);
+        }
+      },
+    );
 
     if (!pollResult) {
       throw new Error('Polling completed but no video URL returned');
@@ -263,6 +282,7 @@ async function pollUntilCompletion(
   inferenceId: string,
   model: string,
   route?: VideoGenerationRoute,
+  onPending?: (queuePosition: number) => Promise<void>,
 ): Promise<{
   headers?: Record<string, string>;
   usage?: VideoGenerationUsage;
@@ -284,6 +304,10 @@ async function pollUntilCompletion(
 
       if (result.status === 'failed') {
         throw new Error(`Video generation failed: ${result.error}`);
+      }
+
+      if (result.status === 'pending' && result.queuePosition !== undefined && onPending) {
+        await onPending(result.queuePosition);
       }
 
       log('Task %s still in progress', inferenceId);

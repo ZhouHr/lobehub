@@ -70,6 +70,7 @@ export type PollVideoStatusResult =
       status: 'failed';
     }
   | {
+      queuePosition?: number;
       status: 'pending';
     };
 

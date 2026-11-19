@@ -212,6 +212,20 @@ export class GenerationBatchActionImpl {
             batch.generations.some((gen) => gen.id === generationId),
           );
 
+          const targetGeneration = targetBatch?.generations.find((gen) => gen.id === generationId);
+
+          if (targetBatch && targetGeneration && data.queuePosition != null) {
+            this.#get().internal_dispatchGenerationBatch(topicId, {
+              batchId: targetBatch.id,
+              generationId,
+              type: 'updateGenerationInBatch',
+              value: {
+                ...targetGeneration,
+                task: { ...targetGeneration.task, queuePosition: data.queuePosition },
+              },
+            });
+          }
+
           if (
             (data.status === AsyncTaskStatus.Success || data.status === AsyncTaskStatus.Error) &&
             targetBatch
