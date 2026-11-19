@@ -268,6 +268,8 @@ describe('systemStatusSelectors', () => {
         'pages',
         'tasks',
         'image',
+
+        'video',
         'community',
         'resource',
         'memory',
@@ -288,6 +290,8 @@ describe('systemStatusSelectors', () => {
         'pages',
         'tasks',
         'image',
+
+        'video',
         'community',
         'resource',
         'memory',
@@ -306,6 +310,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'tasks',
         'community',
         'resource',
@@ -331,6 +337,8 @@ describe('systemStatusSelectors', () => {
         'private',
         'agent',
         'image',
+
+        'video',
         'community',
         'resource',
         'memory',
@@ -349,6 +357,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'resource',
         'memory',
@@ -367,6 +377,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'memory',
       ];
@@ -385,6 +397,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'memory',
       ]);
@@ -400,6 +414,8 @@ describe('systemStatusSelectors', () => {
         SIDEBAR_SPACER_ID,
         'tasks',
         'image',
+
+        'video',
       ];
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
@@ -420,6 +436,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'project',
         'community',
         'memory',
@@ -475,6 +493,8 @@ describe('systemStatusSelectors', () => {
         'recents',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'memory',
       ]);
@@ -497,6 +517,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'memory',
       ]);
@@ -637,6 +659,8 @@ describe('systemStatusSelectors', () => {
         'agent',
         SIDEBAR_SPACER_ID,
         'image',
+
+        'video',
         'community',
         'resource',
         'memory',

@@ -117,6 +117,12 @@ export const useNavLayout = (): NavLayout => {
           url: '/image',
         },
         {
+          icon: getRouteById('video')!.icon,
+          key: SidebarTabKey.Video,
+          title: t('tab.video'),
+          url: '/video',
+        },
+        {
           hidden: !showMarket,
           icon: getRouteById('community')!.icon,
           key: SidebarTabKey.Community,

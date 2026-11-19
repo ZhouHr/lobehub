@@ -242,6 +242,7 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'agent',
   SIDEBAR_SPACER_ID,
   'image',
+  'video',
   'community',
   'memory',
 ];
