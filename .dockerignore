@@ -7,3 +7,6 @@ npm-debug.log
 .github
 *.md
 .env.example
+
+# Deployment data and compose files are runtime-only; never send them into the image context.
+docker-compose
