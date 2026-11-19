@@ -186,6 +186,10 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
       // Self-hosted deployments without SMTP still accept email/password sign-ups.
       sendOnSignUp: authEnv.AUTH_EMAIL_VERIFICATION,
       sendVerificationEmail: async ({ user, url }, request) => {
+        // No SMTP / verification disabled: do not attempt to send. The change-email
+        // route still updates the address directly for unverified accounts.
+        if (!authEnv.AUTH_EMAIL_VERIFICATION) return;
+
         // Skip sending verification link email for mobile clients (Expo/React Native)
         // Mobile clients use OTP verification instead, triggered manually via emailOTP plugin
         if (request?.headers?.get?.('x-client-type') === 'mobile') {
@@ -269,6 +273,9 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
     user: {
       changeEmail: {
         enabled: true,
+        // Internal deployments keep accounts unverified (no SMTP); let them change
+        // the email directly instead of waiting for a confirmation link.
+        updateEmailWithoutVerification: true,
       },
       additionalFields: {
         username: {

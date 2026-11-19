@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import { createChangePasswordModal } from './ChangePasswordModal';
 import ProfileRow from './ProfileRow';
 import { usePasswordReset } from './usePasswordReset';
 
@@ -16,16 +17,25 @@ const PasswordRow = () => {
   const hasPasswordAccount = useUserStore(authSelectors.hasPasswordAccount);
   const { requestReset, sending, sent } = usePasswordReset(userProfile?.email);
 
+  const handleClick = () => {
+    if (hasPasswordAccount) {
+      createChangePasswordModal();
+      return;
+    }
+
+    void requestReset();
+  };
+
   return (
     <ProfileRow
       anchor={'profile-password'}
       label={t('profile.password')}
       action={
-        <Button loading={sending} size="small" onClick={requestReset}>
-          {sent
-            ? t('betterAuth.signin.emailSent.resend')
-            : hasPasswordAccount
-              ? t('profile.changePassword')
+        <Button loading={hasPasswordAccount ? false : sending} size="small" onClick={handleClick}>
+          {hasPasswordAccount
+            ? t('profile.changePassword')
+            : sent
+              ? t('betterAuth.signin.emailSent.resend')
               : t('profile.setPassword')}
         </Button>
       }

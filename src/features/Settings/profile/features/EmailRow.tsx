@@ -53,6 +53,7 @@ const EmailRow = () => {
         return;
       }
       setIsEditing(false);
+      await useUserStore.getState().refreshUserState();
       toast.success(t('profile.emailChangeSuccess'));
     } catch (err) {
       console.error('Failed to change email:', err);
