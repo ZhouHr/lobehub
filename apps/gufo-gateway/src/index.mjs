@@ -487,6 +487,7 @@ const server = createServer((req, res) => {
 
 await redis.connect();
 const workerRedis = redis.duplicate();
+workerRedis.on('error', (error) => log('error', { message: error.message }));
 await workerRedis.connect();
 log('info', { event: 'gateway_started', port: PORT, upstream: UPSTREAM, maxQueue: MAX_QUEUE_SIZE });
 
