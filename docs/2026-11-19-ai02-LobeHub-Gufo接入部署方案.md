@@ -402,3 +402,43 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://192.168.197.152:3210/api
 - 管理员/用户修改邮箱时仍会做唯一性校验；已存在的邮箱不会真正的更新；
 - 密码修改需要当前密码，忘记当前密码时仍按 10.1 节由管理员重置；
 - 未配置 SMTP 时，注册、密码修改、邮箱修改都不再触发邮件发送错误。
+
+
+### 10.7 接入自己的 new-api 代理网关
+
+`https://agent.thinkinpower.net:8443/` 不是 HTTP 正向代理，而是 ai02 上 `nginx-ssl` 反向代理到 `new-api:3000` 的 OpenAI 兼容网关（响应头有 `X-New-Api-Version`，`/v1/models` 返回 `Invalid token`）。
+
+因此应把它配置成 LobeHub 的 **New API 服务商**，而不是桌面端的“网络代理”：
+
+1. 在 `https://agent.thinkinpower.net:8443/` 的 New API 控制台创建令牌（`sk-...`），并允许所需模型；
+2. LobeHub：**设置 → 服务商 → New API**；
+3. Base URL 填 `https://agent.thinkinpower.net:8443`（New API runtime 会自动补 `/v1`，不要重复写 `/v1`）；
+4. API Key 填 New API 令牌；
+5. 保存后在模型列表刷新/启用需要的模型。
+
+**网络注意**：LobeHub 容器直接访问公网域名会因 DNS/回环失败（实测 `fetch failed`），但容器访问 `http://192.168.197.152:3000` 可以成功。解决办法是为 `lobe` 容器加一条 hosts 映射，让公网域名解析到 ai02 宿主机：
+
+```yaml
+services:
+  lobe:
+    extra_hosts:
+      - 'agent.thinkinpower.net:192.168.197.152'
+```
+
+已放在 `docker-compose/agent-proxy/docker-compose.yml`。启动时叠加：
+
+```bash
+docker compose --env-file docker-compose/deploy/.env \
+  -f docker-compose/deploy/docker-compose.yml \
+  -f docker-compose/gufo/docker-compose.yml \
+  -f docker-compose/agent-proxy/docker-compose.yml up -d
+```
+
+容器内验证：
+
+```bash
+docker exec lobehub node -e 'fetch("https://agent.thinkinpower.net:8443/").then(r=>console.log(r.status))'
+# 200
+```
+
+如果不想用域名，也可以直接把 New API 的 Base URL 填成 `http://192.168.197.152:3000`（容器已验证可达，不走 TLS）。

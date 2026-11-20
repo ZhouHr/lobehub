@@ -1,0 +1,12 @@
+# Route the new-api gateway domain to the ai02 host, so LobeHub's server-side
+# provider requests use the same public URL and TLS certificate as the browser.
+#
+#   docker compose \
+#     -f docker-compose/deploy/docker-compose.yml \
+#     -f docker-compose/gufo/docker-compose.yml \
+#     -f docker-compose/agent-proxy/docker-compose.yml \
+#     up -d
+services:
+  lobe:
+    extra_hosts:
+      - 'agent.thinkinpower.net:${AGENT_PROXY_HOST:-192.168.197.152}'
